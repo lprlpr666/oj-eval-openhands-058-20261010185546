@@ -10,15 +10,16 @@
 #include <algorithm>
 #include <set>
 #include <queue>
+#include <unordered_set>
 #include <cctype>
 
 // Basic exception hierarchy
 class BasicException {
 protected:
-    const char *message;
+    std::string message;
 public:
-    explicit BasicException(const char *_message) : message(_message) {}
-    virtual const char *what() const { return message; }
+    explicit BasicException(const std::string &_message) : message(_message) {}
+    virtual const char *what() const { return message.c_str(); }
     virtual ~BasicException() = default;
 };
 
@@ -97,6 +98,7 @@ private:
     }
     // validate types string: each type only letters, length <=10, at least one, at most 7
     static std::vector<std::string> validateAndParseTypes(const std::string &typesStr) {
+        static const std::unordered_set<std::string> allowed = {"water","fire","grass","electric","ground","flying","dragon"};
         auto vec = splitTypes(typesStr);
         if (vec.empty() || vec.size() > 7) {
             throw ArgumentException((std::string("Argument Error: PM Type Invalid (") + (vec.empty()? "" : vec[0]) + ")").c_str());
@@ -109,6 +111,9 @@ private:
                 if (!std::isalpha(static_cast<unsigned char>(c))) {
                     throw ArgumentException((std::string("Argument Error: PM Type Invalid (") + t + ")").c_str());
                 }
+            }
+            if (allowed.find(t) == allowed.end()) {
+                throw ArgumentException((std::string("Argument Error: PM Type Invalid (") + t + ")").c_str());
             }
         }
         return vec;

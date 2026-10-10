@@ -8,6 +8,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <set>
 #include <cctype>
 
 // Basic exception hierarchy

@@ -151,20 +151,16 @@ public:
     bool pokeAdd(const char *name_c, int id, const char *types_c) {
         std::string name(name_c);
         std::string typesStr(types_c);
-        // validation
-        try {
-            validateName(name);
-            auto typesVec = validateAndParseTypes(typesStr);
-            // check duplicates
-            if (data.count(id) || std::any_of(data.begin(), data.end(), [&](const auto &kv){return kv.second.name == name;})) {
-                return false;
-            }
-            Pokemon p; p.name = name; p.id = id; p.types = std::move(typesVec);
-            data[id] = std::move(p);
-            return true;
-        } catch (const ArgumentException &) {
-            throw; // propagate
+        // validation: will throw ArgumentException on error
+        validateName(name);
+        auto typesVec = validateAndParseTypes(typesStr);
+        // check duplicates: if duplicate id or name, do not add and return false
+        if (data.count(id) || std::any_of(data.begin(), data.end(), [&](const auto &kv){return kv.second.name == name;})) {
+            return false;
         }
+        Pokemon p; p.name = name; p.id = id; p.types = std::move(typesVec);
+        data[id] = std::move(p);
+        return true;
     }
     bool pokeDel(int id) {
         auto it = data.find(id);
@@ -207,6 +203,8 @@ public:
     }
     float attack(const char *type_c, int id) const {
         std::string atk(type_c);
+        // convert attack type to lower case for consistency
+        std::transform(atk.begin(), atk.end(), atk.begin(), ::tolower);
         auto it = data.find(id);
         if (it == data.end()) return -1.0f;
         const Pokemon &def = it->second;
@@ -226,13 +224,11 @@ public:
         while (!q.empty()) {
             int curId = q.front(); q.pop();
             const Pokemon &cur = data.at(curId);
-            // try to capture any not yet owned pokemon
             for (const auto &kv : data) {
                 int pid = kv.first;
                 if (ownedIds.count(pid)) continue;
                 const Pokemon &target = kv.second;
                 bool can = false;
-                // any type of cur can attack target
                 for (const auto &atkType : cur.types) {
                     double mult = 1.0;
                     for (const auto &defType : target.types) {

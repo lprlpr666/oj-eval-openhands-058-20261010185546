@@ -9,6 +9,7 @@
 #include <fstream>
 #include <algorithm>
 #include <set>
+#include <queue>
 #include <cctype>
 
 // Basic exception hierarchy
@@ -48,7 +49,11 @@ private:
         std::stringstream ss(s);
         std::string item;
         while (std::getline(ss, item, '#')) {
-            if (!item.empty()) res.push_back(item);
+            if (!item.empty()) {
+                // convert to lower case for consistency
+                std::transform(item.begin(), item.end(), item.begin(), ::tolower);
+                res.push_back(item);
+            }
         }
         return res;
     }
@@ -208,34 +213,31 @@ public:
     }
     int catchTry() const {
         if (data.empty()) return 0;
-        // start with smallest id pokemon owned
+        // start with the pokemon with smallest id
         std::set<int> ownedIds;
-        auto itStart = data.begin();
-        ownedIds.insert(itStart->first);
-        bool progress = true;
-        while (progress) {
-            progress = false;
+        ownedIds.insert(data.begin()->first);
+        std::queue<int> q;
+        q.push(data.begin()->first);
+        while (!q.empty()) {
+            int curId = q.front(); q.pop();
+            const Pokemon &cur = data.at(curId);
+            // try to capture any not yet owned pokemon
             for (const auto &kv : data) {
                 int pid = kv.first;
                 if (ownedIds.count(pid)) continue;
                 const Pokemon &target = kv.second;
-                // check if any owned pokemon can deal >=2x
                 bool can = false;
-                for (int oid : ownedIds) {
-                    const Pokemon &owner = data.at(oid);
-                    // owner can use any of its types as attack
-                    for (const auto &atkType : owner.types) {
-                        double mult = 1.0;
-                        for (const auto &defType : target.types) {
-                            mult *= typeEffect(atkType, defType);
-                        }
-                        if (mult >= 2.0 - 1e-9) { can = true; break; }
+                // any type of cur can attack target
+                for (const auto &atkType : cur.types) {
+                    double mult = 1.0;
+                    for (const auto &defType : target.types) {
+                        mult *= typeEffect(atkType, defType);
                     }
-                    if (can) break;
+                    if (mult >= 2.0 - 1e-9) { can = true; break; }
                 }
                 if (can) {
                     ownedIds.insert(pid);
-                    progress = true;
+                    q.push(pid);
                 }
             }
         }
